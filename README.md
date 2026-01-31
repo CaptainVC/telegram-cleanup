@@ -24,7 +24,7 @@ Then open `out\report.html`.
 To apply a selection:
 
 ```powershell
-docker compose run --rm telegram-cleanup python tg_cleanup.py apply out\selection.json
+docker compose run --rm telegram-cleanup python tg_cleanup.py apply out/selection.json
 ```
 
 ### Option B: Local Python
@@ -95,3 +95,19 @@ Your Telegram login persists because Telethon stores a **session file** on your 
 As long as that file remains, you generally **won’t need OTP again** even if you run the tool next month.
 
 It will ask for OTP again if you delete the session file, revoke Telegram sessions (Settings → Devices), or Telegram invalidates the session.
+
+### Useful Docker commands
+List running containers:
+```powershell
+docker ps
+```
+
+Stop a running container:
+```powershell
+docker stop <container_id>
+```
+
+Remove a stopped container:
+```powershell
+docker rm <container_id>
+```
