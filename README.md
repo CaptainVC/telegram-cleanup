@@ -70,3 +70,18 @@ python tg_cleanup.py apply out/selection.json
 
 ## License
 MIT
+
+## Understanding credentials (important)
+There are **two different things** involved:
+
+1) **Telegram API app credentials** (in `.env`)
+- `TG_API_ID` and `TG_API_HASH` come from https://my.telegram.org/apps
+- They identify your *developer app* so Telethon can connect.
+
+2) **Your account login** (entered interactively on first run)
+- Phone number + OTP code (and 2FA password if enabled) are used to sign into your **Telegram user account**.
+- After the first successful login, Telethon stores a local session file under:
+  - `out/session/telegram_cleanup.session`
+- Because the project directory is mounted into Docker, the session persists on your machine and future runs should not ask for OTP again.
+
+> `.env` does **not** replace OTP/2FA. It only provides the API app credentials.
