@@ -156,7 +156,7 @@ async def apply(selection_path: str, dry_run=False, delay_s=3.0):
         return
 
     os.makedirs(os.path.join('out','runs'), exist_ok=True)
-    runlog = {'ts': datetime.utcnow().isoformat()+'Z', 'dry_run': dry_run, 'left': [], 'failed': []}
+    runlog = {'ts': datetime.now(timezone.utc).isoformat().replace('+00:00','Z'), 'dry_run': dry_run, 'left': [], 'failed': []}
 
     client = get_client()
     await client.start()
