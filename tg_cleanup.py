@@ -3,7 +3,7 @@ import json
 import time
 import argparse
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from telethon import TelegramClient
 from telethon.errors import ChatAdminRequiredError, ChannelPrivateError, UserDeactivatedBanError
@@ -132,7 +132,7 @@ async def scan(limit=1000):
     items = sorted(candidates, key=lambda x: x.score, reverse=True)
 
     out_json = {
-        'generated_at': datetime.utcnow().isoformat() + 'Z',
+        'generated_at': datetime.now(timezone.utc).isoformat().replace('+00:00','Z'),
         'items': [x.__dict__ for x in items],
         'unavailable': unavailable,
     }
@@ -148,6 +148,7 @@ async def scan(limit=1000):
 
 
 async def apply(selection_path: str, dry_run=False, delay_s=3.0):
+    print(f"Loading selection from: {selection_path}")
     sel = json.load(open(selection_path, 'r', encoding='utf-8'))
     ids = set(sel.get('ids') or [])
     if not ids:
@@ -164,7 +165,11 @@ async def apply(selection_path: str, dry_run=False, delay_s=3.0):
         dialogs = await client.get_dialogs(limit=5000)
         id_to_dialog = {d.entity.id: d for d in dialogs if getattr(d, 'entity', None)}
 
+        get_order = 0
+        total = len(ids)
         for chat_id in ids:
+            get_order += 1
+            print(f"[{get_order}/ {total}] Processing chat_id={chat_id} ...")
             d = id_to_dialog.get(int(chat_id))
             if not d:
                 runlog['failed'].append({'id': chat_id, 'error': 'not found in dialogs'})
@@ -175,13 +180,16 @@ async def apply(selection_path: str, dry_run=False, delay_s=3.0):
 
             try:
                 if dry_run:
+                    print(f"DRY-RUN: would leave {title} (id={chat_id})")
                     runlog['left'].append({'id': chat_id, 'title': title, 'dry_run': True})
                     continue
 
                 await client(LeaveChannelRequest(ent))
+                print(f"LEFT: {title} (id={chat_id})")
                 runlog['left'].append({'id': chat_id, 'title': title})
                 time.sleep(delay_s)
             except (ChatAdminRequiredError, ChannelPrivateError, UserDeactivatedBanError) as e:
+                print(f"FAILED: {title} (id={chat_id}) => {e}")
                 runlog['failed'].append({'id': chat_id, 'title': title, 'error': str(e)})
             except Exception as e:
                 runlog['failed'].append({'id': chat_id, 'title': title, 'error': str(e)})
