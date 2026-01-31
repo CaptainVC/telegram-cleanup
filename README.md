@@ -85,3 +85,13 @@ There are **two different things** involved:
 - Because the project directory is mounted into Docker, the session persists on your machine and future runs should not ask for OTP again.
 
 > `.env` does **not** replace OTP/2FA. It only provides the API app credentials.
+
+## Stopping Docker + running later
+You can safely stop/remove containers in Docker Desktop.
+
+Your Telegram login persists because Telethon stores a **session file** on your machine:
+- `out/session/telegram_cleanup.session`
+
+As long as that file remains, you generally **won’t need OTP again** even if you run the tool next month.
+
+It will ask for OTP again if you delete the session file, revoke Telegram sessions (Settings → Devices), or Telegram invalidates the session.
