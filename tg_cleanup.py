@@ -89,7 +89,7 @@ def get_client():
     return TelegramClient(session_path, int(api_id), api_hash)
 
 
-def scan(limit=1000):
+async def scan(limit=1000):
     os.makedirs('out', exist_ok=True)
 
     env = Environment(loader=FileSystemLoader('templates'))
@@ -98,8 +98,11 @@ def scan(limit=1000):
     candidates = []
     unavailable = []
 
-    with get_client() as client:
-        dialogs = client.get_dialogs(limit=limit)
+    client = get_client()
+    await client.start()  # prompts for phone/OTP/2FA as needed
+
+    try:
+        dialogs = await client.get_dialogs(limit=limit)
         for d in dialogs:
             ent = d.entity
             title = getattr(ent, 'title', None) or getattr(ent, 'first_name', '') or 'Unknown'
@@ -122,6 +125,8 @@ def scan(limit=1000):
                 candidates.append(ChatCandidate(id=ent.id, title=title, username=username, kind=kind, score=score, reasons=reasons))
             except Exception as e:
                 unavailable.append({'title': title, 'kind': kind, 'error': str(e)})
+    finally:
+        await client.disconnect()
 
     # sort high score first
     items = sorted(candidates, key=lambda x: x.score, reverse=True)
@@ -142,7 +147,7 @@ def scan(limit=1000):
     print('Wrote out/report.html and out/candidates.json')
 
 
-def apply(selection_path: str, dry_run=False, delay_s=3.0):
+async def apply(selection_path: str, dry_run=False, delay_s=3.0):
     sel = json.load(open(selection_path, 'r', encoding='utf-8'))
     ids = set(sel.get('ids') or [])
     if not ids:
@@ -152,8 +157,11 @@ def apply(selection_path: str, dry_run=False, delay_s=3.0):
     os.makedirs(os.path.join('out','runs'), exist_ok=True)
     runlog = {'ts': datetime.utcnow().isoformat()+'Z', 'dry_run': dry_run, 'left': [], 'failed': []}
 
-    with get_client() as client:
-        dialogs = client.get_dialogs(limit=5000)
+    client = get_client()
+    await client.start()
+
+    try:
+        dialogs = await client.get_dialogs(limit=5000)
         id_to_dialog = {d.entity.id: d for d in dialogs if getattr(d, 'entity', None)}
 
         for chat_id in ids:
@@ -170,14 +178,15 @@ def apply(selection_path: str, dry_run=False, delay_s=3.0):
                     runlog['left'].append({'id': chat_id, 'title': title, 'dry_run': True})
                     continue
 
-                # LeaveChannelRequest works for channels; groups are also treated as channels in many cases.
-                client(LeaveChannelRequest(ent))
+                await client(LeaveChannelRequest(ent))
                 runlog['left'].append({'id': chat_id, 'title': title})
                 time.sleep(delay_s)
             except (ChatAdminRequiredError, ChannelPrivateError, UserDeactivatedBanError) as e:
                 runlog['failed'].append({'id': chat_id, 'title': title, 'error': str(e)})
             except Exception as e:
                 runlog['failed'].append({'id': chat_id, 'title': title, 'error': str(e)})
+    finally:
+        await client.disconnect()
 
     out_path = os.path.join('out','runs', f"run_{int(time.time())}.json")
     with open(out_path, 'w', encoding='utf-8') as f:
@@ -187,6 +196,8 @@ def apply(selection_path: str, dry_run=False, delay_s=3.0):
 
 
 def main():
+    import asyncio
+
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest='cmd', required=True)
 
@@ -201,9 +212,9 @@ def main():
     args = p.parse_args()
 
     if args.cmd == 'scan':
-        scan(limit=args.limit)
+        asyncio.run(scan(limit=args.limit))
     elif args.cmd == 'apply':
-        apply(args.selection, dry_run=args.dry_run, delay_s=args.delay)
+        asyncio.run(apply(args.selection, dry_run=args.dry_run, delay_s=args.delay))
 
 
 if __name__ == '__main__':
