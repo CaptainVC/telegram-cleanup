@@ -9,6 +9,28 @@ Local utility to detect “trading-related” Telegram channels/groups and help 
 
 ## Quick start (Windows 11)
 
+### Option A: Docker (recommended for reproducibility)
+
+1) Install Docker Desktop (WSL2 backend).
+2) In PowerShell:
+
+```powershell
+cd D:\Files\TelegramCleanup
+docker compose run --rm telegram-cleanup python tg_cleanup.py scan
+```
+
+Then open `out\report.html`.
+
+To apply a selection:
+
+```powershell
+docker compose run --rm telegram-cleanup python tg_cleanup.py apply out\selection.json
+```
+
+### Option B: Local Python
+
+
+
 ### 1) Install Python
 Install Python 3.11+ from https://www.python.org/downloads/
 

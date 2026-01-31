@@ -1,0 +1,11 @@
+services:
+  telegram-cleanup:
+    build: .
+    image: telegram-cleanup:latest
+    working_dir: /app
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
