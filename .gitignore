@@ -1,0 +1,16 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# secrets
+.env
+*.session
+*.session-journal
+
+# outputs
+out/
+
+# OS
+.DS_Store
+Thumbs.db

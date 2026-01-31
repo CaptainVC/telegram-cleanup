@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Telegram Cleanup Report</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:18px;background:#0b1020;color:#e6eaf2}
+    .muted{color:#9aa4b2}
+    .card{background:#111a2e;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;margin:12px 0}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top}
+    th{color:#9aa4b2}
+    input,button{padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#0f1730;color:#e6eaf2}
+    button{cursor:pointer}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.15);color:#9aa4b2;font-size:12px}
+    .hi{border-color:rgba(239,68,68,.35);color:#fecaca}
+    .mid{border-color:rgba(245,158,11,.35);color:#fde68a}
+    .low{border-color:rgba(34,197,94,.35);color:#bff0d2}
+  </style>
+</head>
+<body>
+  <h1>Telegram Cleanup Report</h1>
+  <div class="muted">Generated: {{ generated_at }} · Total chats: {{ items|length }}</div>
+
+  <div class="card row">
+    <div><label class="muted">Search</label><br/><input id="q" placeholder="type to filter..."/></div>
+    <div><label class="muted">Min score</label><br/><input id="min" type="number" value="60" style="width:90px"/></div>
+    <div style="flex:1"></div>
+    <button onclick="exportSelection()">Export selection.json</button>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px 0">Candidates</h2>
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th>Leave</th>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Score</th>
+          <th>Reasons</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for it in items %}
+        <tr data-name="{{ (it.title or '')|lower }}" data-score="{{ it.score }}">
+          <td><input type="checkbox" class="sel" data-id="{{ it.id }}"/></td>
+          <td>
+            <div><b>{{ it.title }}</b></div>
+            <div class="muted">{{ it.username or '' }}</div>
+          </td>
+          <td>{{ it.kind }}</td>
+          <td>
+            {% if it.score >= 70 %}
+              <span class="pill hi">{{ it.score }}</span>
+            {% elif it.score >= 50 %}
+              <span class="pill mid">{{ it.score }}</span>
+            {% else %}
+              <span class="pill low">{{ it.score }}</span>
+            {% endif %}
+          </td>
+          <td class="muted">{{ it.reasons|join(', ') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if unavailable and unavailable|length %}
+  <div class="card">
+    <h2 style="margin:0 0 8px 0">Unavailable / Inaccessible</h2>
+    <div class="muted">These are chats that look deleted/forbidden/inaccessible. You may not be able to leave them via API, but they’re listed for awareness.</div>
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Reason</th></tr></thead>
+      <tbody>
+      {% for it in unavailable %}
+        <tr>
+          <td><b>{{ it.title }}</b></td>
+          <td>{{ it.kind }}</td>
+          <td class="muted">{{ it.error }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+<script>
+function applyFilter(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const min=Number(document.getElementById('min').value||0);
+  for(const tr of document.querySelectorAll('#tbl tbody tr')){
+    const name=tr.getAttribute('data-name')||'';
+    const score=Number(tr.getAttribute('data-score')||0);
+    const ok = score>=min && (!q || name.includes(q));
+    tr.style.display = ok ? '' : 'none';
+  }
+}
+
+document.getElementById('q').addEventListener('input', applyFilter);
+document.getElementById('min').addEventListener('input', applyFilter);
+applyFilter();
+
+function exportSelection(){
+  const ids=[...document.querySelectorAll('.sel:checked')].map(x=>x.getAttribute('data-id'));
+  const blob=new Blob([JSON.stringify({ids},null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='selection.json';
+  a.click();
+}
+</script>
+</body>
+</html>
